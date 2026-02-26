@@ -18,26 +18,25 @@ pub fn generate_list(path: String) -> Vec<(u8, usize)> {
     return list;
 }
 
-// Mitt träd ser ut såhär utifrån erat exempel från slide 19
-//     6        | Istället för: |      6
-//   /   \      |               |    /   \
-// a:3    3     |               |  a:3    3
-//      /   \   |               |       /   \
-//    b:2    1  |               |     b:2   c:1
-//          /   |               |
-//        c:1   |               |
-
 pub fn generate_huffman_string(huffman: Huffman) -> String {
-    let mut buf = String::new();
+    let buf = walk(huffman, String::new());
+    return buf;
+}
+
+pub fn walk(huffman: Huffman, prefix: String) -> String {
+    let mut prefix = prefix;
     match huffman {
-        Huffman::Leaf(i, j) => {
-            buf.push_str(format!("0:{}\n", char::from_u32(i as u32).unwrap()).as_str());
+        Huffman::Leaf(i, _) => {
+            return format!("{}:{}\n", prefix, char::from_u32(i as u32).unwrap());
         }
-        Huffman::Node(huffman, huffman1, _) => {
-            buf.push_str(format!("1{}", generate_huffman_string(*huffman1)).as_str());
+        Huffman::Node(left, right, _) => {
+            return format!(
+                "{}{}",
+                walk(*left, format!("{}0", prefix)),
+                walk(*right, format!("{}1", prefix))
+            );
         }
     }
-    buf
 }
 
 #[cfg(test)]
@@ -63,6 +62,7 @@ mod tests {
         let list = generate_list("test.txt".to_string());
         println!("list: {:?}", list);
         let tree = generate_huffman_tree(list);
+        println!("Tree: {:?}", tree);
         println!("Huffman: {:?}", generate_huffman_string(tree));
     }
 }
