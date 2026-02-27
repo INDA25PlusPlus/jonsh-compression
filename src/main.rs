@@ -9,5 +9,5 @@ fn main() {
     let huffman = Huffman::build_tree(&mut löööv);
     let hasch = huffman.build_code();
     let (compressssssed, vb) = encode(&input, &hasch);
-    write_to_file_finaly_done_finished("output.huff", &huffman.root, compressssssed, vb);
+    write_to_file_finaly_done_finished("output.huff", &huffman.root, compressssssed, vb).unwrap();
 }
