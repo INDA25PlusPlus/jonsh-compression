@@ -1,4 +1,27 @@
-use std::{collections::HashMap, fs};
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::{Result, Write},
+};
+
+pub fn write_to_file_finaly_done_finished(
+    path: &str,
+    tree: &Tree,
+    compressed: Vec<u8>,
+    vb: u8,
+) -> Result<()> {
+    let mut file = File::create(path).unwrap();
+    let mut treeb = Vec::new();
+    tree.serialize(&mut treeb);
+    let treel = treeb.len() as u32;
+    file.write_all(&treel.to_le_bytes()).unwrap();
+    file.write_all(&treeb).unwrap();
+    file.write_all(&[vb]);
+    let comprsl = compressed.len() as u64;
+    file.write_all(&comprsl.to_le_bytes()).unwrap();
+    file.write_all(&compressed);
+    Ok(())
+}
 
 pub fn encode(input: &[u8], table: &HashMap<u8, Vec<bool>>) -> (Vec<u8>, u8) {
     let mut writer = Bitwriter::default();
@@ -83,7 +106,7 @@ impl Tree {
 
 #[derive(Debug, Clone)]
 pub struct Huffman {
-    root: Tree,
+    pub root: Tree,
 }
 
 impl Huffman {
