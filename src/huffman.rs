@@ -61,19 +61,19 @@ impl Huffman {
         }
     }
 
-    pub fn walk(tree: Tree, path: Vec<bool>, table: HashMap<u8, Vec<bool>>) {
+    pub fn walk(tree: &Tree, path: &mut Vec<bool>, table: &mut HashMap<u8, Vec<bool>>) {
         let mut path = path;
         let mut table = table;
         match tree {
             Tree::Leaf(_, b) => {
-                table.insert(b, path.clone());
+                table.insert(*b, path.clone());
             }
             Tree::Node(_, left, right) => {
                 path.push(false);
-                Self::walk(*left, path.clone(), table.clone());
+                Self::walk(left, path, table);
                 path.pop();
                 path.push(true);
-                Self::walk(*right, path.clone(), table.clone());
+                Self::walk(right, path, table);
                 path.pop();
             }
         }
@@ -82,7 +82,7 @@ impl Huffman {
     pub fn build_code(&self) -> HashMap<u8, Vec<bool>> {
         let mut hasch = HashMap::new();
         let mut path = Vec::new();
-        Self::walk(self.root.clone(), path, hasch.clone());
+        Self::walk(&self.root, &mut path, &mut hasch);
         hasch
     }
 }
