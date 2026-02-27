@@ -1,3 +1,8 @@
+mod huffman;
+use std::fs;
+
+use crate::huffman::Huffman;
+
 fn main() {
-    println!("Hello, world!");
+    let data: Vec<u8> = fs::read("testfile.txt")?;
 }
