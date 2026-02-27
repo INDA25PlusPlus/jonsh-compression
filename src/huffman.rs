@@ -1,5 +1,16 @@
 use std::{collections::HashMap, fs};
 
+pub fn encode(input: &[u8], table: &HashMap<u8, Vec<bool>>) -> (Vec<u8>, u8) {
+    let mut writer = Bitwriter::default();
+    for &b8 in input {
+        let code = &table[&b8];
+        for &b1 in code {
+            writer.push(b1);
+        }
+    }
+    writer.brrrrrrrrrrrrrrrr()
+}
+
 #[derive(Debug, Clone)]
 pub enum Tree {
     Leaf(u64, u8),
@@ -40,8 +51,7 @@ impl Huffman {
         buf
     }
 
-    pub fn build_tree(list: Vec<Tree>) -> Huffman {
-        let mut list = list;
+    pub fn build_tree(list: &mut Vec<Tree>) -> Huffman {
         while list.len() > 1 {
             let t1 = list.pop().unwrap();
             let t2 = list.pop().unwrap();
@@ -62,8 +72,6 @@ impl Huffman {
     }
 
     pub fn walk(tree: &Tree, path: &mut Vec<bool>, table: &mut HashMap<u8, Vec<bool>>) {
-        let mut path = path;
-        let mut table = table;
         match tree {
             Tree::Leaf(_, b) => {
                 table.insert(*b, path.clone());
@@ -87,6 +95,38 @@ impl Huffman {
     }
 }
 
+#[derive(Default)]
+pub struct Bitwriter {
+    buf: Vec<u8>,
+    cur: u8,
+    used: u8,
+}
+
+impl Bitwriter {
+    pub fn push(&mut self, b: bool) {
+        self.cur <<= 1;
+        if b {
+            self.cur |= 1;
+        }
+        self.used += 1;
+
+        if self.used == 8 {
+            self.buf.push(self.cur);
+            self.cur = 0;
+            self.used = 0;
+        }
+    }
+
+    pub fn brrrrrrrrrrrrrrrr(mut self) -> (Vec<u8>, u8) {
+        if self.used > 0 {
+            self.cur <<= 8 - self.used;
+            self.buf.push(self.cur);
+        }
+        let vb = if self.used == 0 { 8 } else { self.used };
+        (self.buf, vb)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::huffman::{self, Huffman, Tree};
@@ -94,8 +134,8 @@ mod test {
     #[test]
     fn test_build_tree() {
         let data: Vec<u8> = "Hello this is a small test file with little words but big enough that the test produces some result. A fun fact: The sentence \"Buffalo buffalo Buffalo buffalo buffalo buffalo Buffalo buffalo\" is grammatically correct".chars().map(|x| x as u8).collect();
-        let list = Huffman::parse_file(data);
-        let tree = Huffman::build_tree(list);
+        let mut list = Huffman::parse_file(data);
+        let tree = Huffman::build_tree(&mut list);
         let code = Huffman::build_code(&tree);
         println!("{:#?}", code);
     }
