@@ -11,6 +11,29 @@ pub fn encode(input: &[u8], table: &HashMap<u8, Vec<bool>>) -> (Vec<u8>, u8) {
     writer.brrrrrrrrrrrrrrrr()
 }
 
+pub fn decode(tree: &Tree, compressed: Vec<u8>, vb: u8) -> Vec<u8> {
+    let mut reader = Bitreader::new(compressed, vb);
+    let mut out = Vec::new();
+    let mut cur = tree;
+    while let Some(b1) = reader.ne_b() {
+        cur = match cur {
+            Tree::Leaf(_, _) => unreachable!(),
+            Tree::Node(_, left, right) => {
+                if b1 {
+                    right
+                } else {
+                    left
+                }
+            }
+        };
+        if let Tree::Leaf(_, b8) = cur {
+            out.push(*b8);
+            cur = tree;
+        }
+    }
+    out
+}
+
 #[derive(Debug, Clone)]
 pub enum Tree {
     Leaf(u64, u8),
@@ -18,10 +41,42 @@ pub enum Tree {
 }
 
 impl Tree {
-    fn freq(&self) -> u64 {
+    pub fn freq(&self) -> u64 {
         match self {
             Tree::Leaf(x, _) => *x,
             Tree::Node(x, _, _) => *x,
+        }
+    }
+
+    pub fn serialize(&self, out: &mut Vec<u8>) {
+        match self {
+            Tree::Leaf(_, b) => {
+                out.push(1);
+                out.push(*b);
+            }
+            Tree::Node(_, left, right) => {
+                out.push(0);
+                left.serialize(out);
+                right.serialize(out);
+            }
+        }
+    }
+
+    pub fn deserialize(input: &mut &[u8]) -> Tree {
+        let tag = input[0];
+        *input = &input[1..];
+        match tag {
+            1 => {
+                let b = input[0];
+                *input = &input[1..];
+                Tree::Leaf(0, b)
+            }
+            0 => {
+                let left = Box::new(Tree::deserialize(input));
+                let right = Box::new(Tree::deserialize(input));
+                Tree::Node(0, left, right)
+            }
+            _ => panic!("Stop Writing shit code and go to sleep dumbasssssssss"),
         }
     }
 }
@@ -102,6 +157,42 @@ pub struct Bitwriter {
     used: u8,
 }
 
+pub struct Bitreader {
+    data: Vec<u8>,
+    b8i: usize,
+    b1i: u8,
+    last: u8,
+}
+
+impl Bitreader {
+    pub fn new(data: Vec<u8>, last: u8) -> Self {
+        Bitreader {
+            data,
+            b8i: 0,
+            b1i: 0,
+            last,
+        }
+    }
+
+    pub fn ne_b(&mut self) -> Option<bool> {
+        if self.b8i >= self.data.len() {
+            return None;
+        }
+        if self.b8i == self.data.len() - 1 && self.b1i >= self.last {
+            return None;
+        }
+        let b8 = self.data[self.b8i];
+        let b1 = (b8 & (1 << (7 - self.b1i))) != 0;
+        self.b1i += 1;
+        if self.b1i == 8 {
+            self.b1i = 0;
+            self.b8i += 1;
+        }
+
+        Some(b1)
+    }
+}
+
 impl Bitwriter {
     pub fn push(&mut self, b: bool) {
         self.cur <<= 1;
@@ -138,5 +229,22 @@ mod test {
         let tree = Huffman::build_tree(&mut list);
         let code = Huffman::build_code(&tree);
         println!("{:#?}", code);
+    }
+
+    #[test]
+    fn test_sedeserialize() {
+        let tree = Tree::Node(
+            0,
+            Box::new(Tree::Leaf(0, 1)),
+            Box::new(Tree::Node(
+                0,
+                Box::new(Tree::Leaf(0, 2)),
+                Box::new(Tree::Leaf(0, 3)),
+            )),
+        );
+        let mut ser = Vec::new();
+        tree.serialize(&mut ser);
+        let deser = Tree::deserialize(&mut &ser[..]);
+        assert_eq!(format!("{:?}", tree), format!("{:?}", deser));
     }
 }
